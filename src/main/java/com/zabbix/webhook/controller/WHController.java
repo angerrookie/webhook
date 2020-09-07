@@ -15,35 +15,28 @@ import com.zabbix.webhook.vo.Alarm;
 import com.zabbix.webhook.vo.Test;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+
+import static com.zabbix.webhook.utils.DataToFile.check;
+
 @RestController
 @CrossOrigin
 @RequestMapping("/zabbix")
 public class WHController {
 
     @PostMapping("/test")
-    public void zabbix(@RequestBody String s) {
+    public void zabbix(@RequestBody String s,HttpServletRequest request) {
 
-        System.out.println(s);
-        s = s.replace("\"{","{");
-        s = s.replace("}\"","}");
-        System.out.println(s);
-        JSONObject jsonObject = JSON.parseObject(s);
-        Test test = (Test) JSONUtil.fastJSONToObject(JSONUtil.fastJSONObjecrToStr(jsonObject), Test.class);
-        DataToFile.write(test);
-    }
-
-    public static void main(String[] args) {
-
-        String s = "{\"text\":\"Problem: cpu使用率大于0\",\"alarm\":\"{\"event_id\":\"35813\",\"group\":\"IMP.TEMPLATE.HOST.LINUX\",\"host_name\":\"10.10.49.190\",\"host_ip\":\"10.10.49.190\",\"alarm_time\":\"2020.09.07 17:24:28\",\"trigger_name\":\"cpu使用率大于0\",\"alarm_value\":\"0.25\",\"alarm_type\":\"alarm\",\"alarm_level\":\"Warning\",\"description\":\"\"}\"}";
-       /* Test test = JSONUtil.fastJSONToObject(s, Test.class);
-        System.out.println(s);
-        s.replaceAll("\\\\","");
-        System.out.println(s);*/
-       s = s.replace("\"{","{");
-       s = s.replace("}\"","}");
-       System.out.println(s);
-        /*int i = s.lastIndexOf('{');
-        int x =s.lastIndexOf('}');
-        System.out.println(s.substring(0,i-1)+s.substring(i,x-1)+s.substring(x-1,s.length()));*/
+        String sgin = request.getHeader("sgin");
+        /*
+         * 做签名认证  防止恶意数据轰炸
+         * 转换成JSON、实体类对象 以便后续操作
+         */
+        if (check(sgin)) {
+            JSONObject jsonObject = JSON.parseObject(DataToFile.variable(s));
+            Test test = (Test) JSONUtil.fastJSONToObject(JSONUtil.fastJSONObjecrToStr(jsonObject), Test.class);
+            // 序列化 和 字符流写入文件
+            DataToFile.write(test);
+        }
     }
 }
